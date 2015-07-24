@@ -41,13 +41,10 @@ nextPosition (x, y, d@Horizontal) = (x + 1, y, d)
 nextPosition (x, y, d@Vertical) = (x, y + 1, d)
 nextPosition (x, y, d@Diagonal) = (x + 1, y + 1, d)
 
-slice :: Grid -> Int -> Signpost -> [Integer]
-slice _ 0 _ = []
-slice grid count signpost@(x,y,_) =
-  (grid ! (x,y)) :
-  slice grid
-        (count - 1)
-        (nextPosition signpost)
+slice :: Int -> Signpost -> [(Int, Int)]
+slice 0 _ = []
+slice count signpost@(x, y, _) =
+  (x, y) : slice (count - 1) (nextPosition signpost)
 
 possibleValues :: [Signpost]
 possibleValues =
@@ -58,16 +55,18 @@ possibleValues =
   [(x, y, Diagonal) | x <- [0..16]
                   , y <- [0..16]]
 
-findSolution :: Grid -> (Signpost, Integer)
+findSolution :: Grid -> ([(Int, Int)], Integer)
 findSolution grid =
   maximumBy (compare `on` snd) $
   fmap resultAt possibleValues
-  where resultAt s = (s, product $ slice grid 4 s)
+  where resultAt s =
+          let positions = slice 4 s
+           in (positions, product $ fmap (grid !) positions)
 
 grid20 :: IO ()
 grid20 =
   do stdGen <- newStdGen
      let grid = makeGrid stdGen
-         solution = findSolution grid
-     print solution
-     putStrLn $ prettyGrid grid Set.empty
+         (positions, total) = findSolution grid
+     putStrLn $ prettyGrid grid $ Set.fromList positions
+     print total
